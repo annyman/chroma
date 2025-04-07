@@ -1,11 +1,12 @@
 import streamlit as st
 from PIL import Image
 import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 import fitz  # PyMuPDF
 import io
 import torch
-#import whisper
-from transformers import pipeline
+import speech_recognition as sr  # Replacing whisper
+from pydub import AudioSegment
 from gtts import gTTS
 import tempfile
 import base64
@@ -15,12 +16,20 @@ from sumy.summarizers.lex_rank import LexRankSummarizer
 
 
 # Initialize models
-#model_whisper = whisper.load_model("base")
-#summarizer = pipeline("summarization")
+recognizer = sr.Recognizer()
 
-def convert_text_to_speech(text, filename="output/audio.mp3"):
+
+def convert_text_to_speech(text, filename="output/audio.wav"):
+    # Step 1: Generate TTS as MP3
+    temp_mp3 = "output/temp.mp3"
     tts = gTTS(text)
-    tts.save(filename)
+    tts.save(temp_mp3)
+
+    # Step 2: Convert MP3 to WAV with specified format
+    audio = AudioSegment.from_mp3(temp_mp3)
+    audio = audio.set_frame_rate(16000).set_channels(1).set_sample_width(2)  # PCM 16-bit (s16le), Mono, 16kHz
+    audio.export(filename, format="wav")
+
     return filename
 
 def extract_text_from_image(image):
@@ -37,8 +46,16 @@ def transcribe_audio(audio_file):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
         tmp_file.write(audio_file.read())
         tmp_file_path = tmp_file.name
-    #result = model_whisper.transcribe(tmp_file_path)
-    #return result["text"]
+    
+    with sr.AudioFile(tmp_file_path) as source:
+        audio_data = recognizer.record(source)
+    
+    try:
+        return recognizer.recognize_google(audio_data)  # Google's free Web Speech API
+    except sr.UnknownValueError:
+        return "Could not understand the audio"
+    except sr.RequestError:
+        return "API request failed"
 
 
 def summarize_text(text, sentence_count=3):
@@ -59,19 +76,8 @@ def summarize_text(text, sentence_count=3):
 # Streamlit Layout
 st.set_page_config(page_title="Chroma AI", layout="centered")
 st.title("📚 Chroma AI - Inclusive Learning Assistant")
-st.markdown("Helping visually, hearing, and cognitively challenged students access learning easily.")
 
-st.markdown("---")
-st.markdown("## 🧑‍🏫 Choose Your Accessibility Need")
-col1, col2, col3 = st.columns(3)
-with col1:
-    visual = st.button("👁 I have trouble seeing")
-with col2:
-    hearing = st.button("👂 I can't hear audio")
-with col3:
-    cognitive = st.button("🧠 I need simplified content")
-
-st.markdown("## 📂 Upload or Record Your Input")
+st.markdown("## 📂 Upload")
 input_type = st.radio("Select Input Type", ["Upload PDF", "Upload Image", "Upload Audio", "Paste Text"])
 input_text = ""
 
