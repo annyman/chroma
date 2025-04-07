@@ -14,52 +14,69 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lex_rank import LexRankSummarizer
 from transformers import pipeline
+import openai
 
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+def summarize_text(text, sentence_count=3):
+    parser = PlaintextParser.from_string(text, Tokenizer("english"))
+    summarizer = LexRankSummarizer()
+    
+    summary = summarizer(parser.document, sentence_count)
+    return " ".join(str(sentence) for sentence in summary)
 
-def summarize_text(text):
-    summary = summarizer(text, max_length=100, min_length=50, do_sample=False)
-    return summary[0]['summary_text']
+def extract_text_from_pdf(file):
+    doc = fitz.open(stream=file.read(), filetype="pdf")
+    text = "\n".join(page.get_text() for page in doc)
+    return text
 
-print(summarize_text("Your transcription text here"))
+def extract_text_from_image(image_file):
+    image = Image.open(image_file)
+    return pytesseract.image_to_string(image)
 
-# Initialize models7
-recognizer = sr.Recognizer()
+def convert_audio_to_text(audio_file):
+    import whisper
+    model = whisper.load_model("base")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
+        temp_audio.write(audio_file.read())
+        temp_audio_path = temp_audio.name
+    result = model.transcribe(temp_audio_path)
+    return result["text"]
 
 
 def convert_text_to_speech(text, filename="output/audio.wav"):
     temp_mp3 = "output/temp.mp3"
     tts = gTTS(text)
     tts.save(temp_mp3)
-
     audio = AudioSegment.from_mp3(temp_mp3)
     audio = audio.set_frame_rate(16000).set_channels(1).set_sample_width(2)
     audio.export(filename, format="wav")
-
     return filename
 
-def extract_text_from_image(image):
-    return pytesseract.image_to_string(image)
+def dyslexia_mode(text, font_size='18px'):
+    style = f"""
+    <style>
+    .dyslexia-text {{
+        font-family: 'OpenDyslexic', sans-serif;
+        font-size: {font_size};
+        line-height: 1.6;
+        letter-spacing: 0.06em;
+    }}
+    @import url('https://fonts.googleapis.com/css2?family=OpenDyslexic');
+    </style>
+    """
+    return f"{style}<div class='dyslexia-text'>{text}</div>"
 
-def extract_text_from_pdf(uploaded_file):
-    doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-    text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
+def generate_mermaid_diagram(prompt, api_key):
+    openai.api_key = api_key
+    diagram_prompt = f"""
+    You are a helpful assistant that converts simple explanations into a Mermaid diagram. 
+    Only return the mermaid code block.
 
-def transcribe_audio(audio_file):
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-        tmp_file.write(audio_file.read())
-        tmp_file_path = tmp_file.name
-    
-    with sr.AudioFile(tmp_file_path) as source:
-        audio_data = recognizer.record(source)
-    
-    try:
-        return recognizer.recognize_google(audio_data)
-    except sr.UnknownValueError:
-        return "Could not understand the audio"
-    except sr.RequestError:
-        return "API request failed"
+    Explanation: {prompt}
+    """
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": diagram_prompt}]
+    )
+    mermaid_code = re.findall(r'```mermaid\n(.*?)```', response['choices'][0]['message']['content'], re.DOTALL)
+    return mermaid_code[0] if mermaid_code else "Diagram generation failed."
 
