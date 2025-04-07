@@ -18,4 +18,6 @@ Welcome to **Chroma AI**, your all-in-one assistant for effortless studying! ðŸ“
 ```sh
 git clone https://github.com/yourusername/chroma-ai.git
 cd chroma-ai
+pip install -r requirements.txt
+streamlit run Home.py
 ```
