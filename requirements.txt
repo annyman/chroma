@@ -1,0 +1,12 @@
+streamlit
+pillow
+numpy
+pytesseract
+opencv-python
+speechrecognition
+gtts
+pydub
+matplotlib
+pdf2image
+transformers
+torch
