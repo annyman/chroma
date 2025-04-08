@@ -8,16 +8,15 @@ Welcome to **Chroma AI**, your all-in-one assistant for effortless studying! �
 ✅ **Convert PDFs & Images** → 🎧 **Audio**  
 ✅ **Transcribe Lectures** → 📝 **Text**  
 ✅ **Simplify Complex Text** ✏️  
-✅ **Generate Visual Aids** 🖼️  
-✅ **(Future) Sign Language to Text** ✋  
+✅ **Generate Visual Aids** 🖼️   
 
 ---
 
 ## **⚡ Installation & Usage**  
 ### **1️⃣ Clone the repository**  
 ```sh
-git clone https://github.com/yourusername/chroma-ai.git
-cd chroma-ai
+git clone https://github.com/annyman/chroma
+cd chroma
 pip install -r requirements.txt
-streamlit run Home.py
+streamlit run app.py
 ```
